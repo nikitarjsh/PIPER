@@ -14,7 +14,7 @@ def extract_features(sequence):
     features.update({'instability_index': peptide.instability_index()})
     features.update({'isoelectric_point': peptide.isoelectric_point()})
     features.update({'mz': peptide.mz()})
-    features.update({'structural_class': peptide.structural_class("Chou", distance="correlation")})
+    #features.update({'structural_class': peptide.structural_class("Chou", distance="correlation")})     # Hamda: Removed becase it had only ne unique values for all our MHC psuedocode
     return features
 
 

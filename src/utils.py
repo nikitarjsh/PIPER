@@ -1,5 +1,7 @@
 import regex as re
 import peptides
+import shap
+import matplotlib.pyplot as plt
 
 
 
@@ -47,3 +49,30 @@ def map_alleles(df):
         return df
     else:
         raise ValueError("Column 'HLA' not found in DataFrame")
+    
+
+## Instead of using regular feature importance, we can use SHAP values to understand the contribution of each feature to the model's predictions
+## SHAP analysis function
+## usage: run_shap_analysis(model, X_test)
+
+def run_shap_analysis(model, X, max_display=20):
+    """
+    Compute and plot SHAP feature importance.
+
+    Args:
+        model: trained LightGBM model
+        X: feature dataframe
+        max_display: number of top features to show
+    """
+
+    # create explainer
+    explainer = shap.TreeExplainer(model)
+
+    # compute shap values
+    shap_values = explainer.shap_values(X)
+
+    # summary plot (like the one you showed)
+    shap.summary_plot(shap_values, X, max_display=max_display)
+
+    # bar plot (global importance)
+    shap.summary_plot(shap_values, X, plot_type="bar", max_display=max_display)

@@ -2,6 +2,9 @@ import regex as re
 import peptides
 import shap
 import matplotlib.pyplot as plt
+import peptidy
+import numpy as np
+import pandas as pd
 
 
 
@@ -76,3 +79,94 @@ def run_shap_analysis(model, X, max_display=20):
 
     # bar plot (global importance)
     shap.summary_plot(shap_values, X, plot_type="bar", max_display=max_display)
+
+
+
+### Extracting position-specific features for peptides
+
+def extract_peptidy_position_features(sequence, padding_len=10, method="aa_descriptors"):  # Hamda: Set to 10 to match the max length of peptides in our dataset
+    """
+    Convert a peptide sequence into position-specific features and return a flat dict.
+
+    Parameters
+    ----------
+    sequence : str
+        Peptide sequence.
+    padding_len : int
+        Final peptide length used by peptidy encoding.
+    method : str
+        One of:
+        - "aa_descriptors" : position-specific amino acid descriptors
+        - "one_hot"        : position-specific one-hot encoding
+        - "blosum62"       : position-specific BLOSUM62 encoding
+
+    Returns
+    -------
+    dict
+        Flat feature dictionary ready to turn into a dataframe row.
+    """
+
+    # choose encoding
+    if method == "aa_descriptors":
+        if hasattr(peptidy.encoding, "aminoacid_descriptor_encoding"):
+            encoded = peptidy.encoding.aminoacid_descriptor_encoding(
+                sequence,
+                padding_len=padding_len
+            )
+        else:
+            raise AttributeError(
+                "peptidy.encoding.amino_acid_descriptor_encoding not found. "
+                "Check your installed peptidy version with dir(peptidy.encoding)."
+            )
+        prefix = "PeptidePos"
+
+    elif method == "one_hot":
+        encoded = peptidy.encoding.one_hot_encoding(
+            sequence,
+            padding_len=padding_len
+        )
+        prefix = "PeptideOH"
+
+    elif method == "blosum62":
+        if hasattr(peptidy.encoding, "blosum62_encoding"):
+            encoded = peptidy.encoding.blosum62_encoding(
+                sequence,
+                padding_len=padding_len
+            )
+        else:
+            raise AttributeError(
+                "peptidy.encoding.blosum62_encoding not found. "
+                "Check your installed peptidy version with dir(peptidy.encoding)."
+            )
+        prefix = "PeptideBLOSUM"
+
+    else:
+        raise ValueError("method must be one of: aa_descriptors, one_hot, blosum62")
+
+    encoded = np.array(encoded)
+
+    # flatten matrix into tabular columns
+    features = {}
+    for i in range(encoded.shape[0]):
+        for j in range(encoded.shape[1]):
+            features[f"{prefix}_p{i+1}_f{j+1}"] = float(encoded[i, j])
+
+    return features
+
+
+def build_peptidy_feature_df(df, peptide_col="peptide", padding_len=9):
+    """
+    Apply position-specific encoding to all peptides in dataframe.
+    Returns a dataframe with one row per peptide.
+    """
+
+    feature_list = []
+
+    for peptide in df[peptide_col]:
+        feat_dict = extract_peptidy_position_features(
+            sequence=peptide,
+            padding_len=padding_len
+        )
+        feature_list.append(feat_dict)
+
+    return pd.DataFrame(feature_list, index=df.index)

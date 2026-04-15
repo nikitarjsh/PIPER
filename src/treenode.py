@@ -2,8 +2,10 @@ import numpy as np
 
 # TreeNode represents a single node in the decision tree.
 # Each node stores the feature index and threshold used for splitting,
-# the predicted class probabilities at that node, and the information gain from the split.
-# It also tracks feature importance (weighted by number of samples) and pointers to left/right child nodes.
+# the predicted class probabilities, label counts at that node, and  the information gain from the split.
+# Feature importance is computed as n_samples * information_gain (weighted contribution of this split).
+# Leaf nodes have no feature_idx, feature_val, or information_gain, only prediction_probs and label_counts.
+# Left and right pointers link to child nodes, and are None for leaf nodes.
 class TreeNode:
     def __init__(self, feature_idx=None, feature_val=None,
                  information_gain=None,

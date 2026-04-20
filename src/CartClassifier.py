@@ -26,25 +26,27 @@ def information_gain(y_parent, y_left, y_right):
     return gini(y_parent) - weighted_child
 
 # Find the best feature and threshold to split on to maximize information gain 
-def best_split(X, y):
+def best_split(X, y, max_features=None):
     best_gain = -1
     best_feat, best_thresh = None, None
 
-    for feat in range(X.shape[1]):
-        thresholds = np.unique(X[:, feat])
+    n_features = X.shape[1]
+    if max_features is not None:
+        feat_indices = np.random.choice(n_features, max_features, replace=False)
+    else:
+        feat_indices = range(n_features)
 
+    for feat in feat_indices:  # ← was: range(X.shape[1])
+        thresholds = np.unique(X[:, feat])
         for thresh in thresholds:
             left_mask  = X[:, feat] <= thresh
             right_mask = ~left_mask
-
             if left_mask.sum() == 0 or right_mask.sum() == 0:
                 continue
-
             gain = information_gain(y, y[left_mask], y[right_mask])
-
             if gain > best_gain:
-                best_gain   = gain
-                best_feat   = feat
+                best_gain  = gain
+                best_feat  = feat
                 best_thresh = thresh
 
     return best_feat, best_thresh, best_gain
@@ -63,52 +65,25 @@ def make_leaf(y, n_samples):
 
 
 #Recursively build the decision tree using CART algorithm. Stops when: max depth is reached, node is pure, or not enough samples
-def build_tree(X, y, depth=0, max_depth=10, min_samples_split=2, min_samples_leaf=1):
+def build_tree(X, y, depth=0, max_depth=10, min_samples_split=2, min_samples_leaf=1, max_features=None):
     n_samples = len(y)
-
-    #Check stopping conditions
-    if (
-        depth >= max_depth
-        or n_samples < min_samples_split
-        or len(set(y)) == 1
-    ):
+    if (depth >= max_depth or n_samples < min_samples_split or len(set(y)) == 1):
         return make_leaf(y, n_samples)
 
-    #Find best split
-    feat, thresh, gain = best_split(X, y)
+    feat, thresh, gain = best_split(X, y, max_features=max_features)  # ← pass it here
 
-    #Stop if no useful split found
     if feat is None or gain <= 0:
         return make_leaf(y, n_samples)
 
-    #Apply split
-    left_mask = X[:, feat] <= thresh
+    left_mask  = X[:, feat] <= thresh
     right_mask = ~left_mask
 
-    #Enforce minimum leaf size
     if left_mask.sum() < min_samples_leaf or right_mask.sum() < min_samples_leaf:
         return make_leaf(y, n_samples)
 
-    #Create decision node
-    node = TreeNode(
-        feature_idx=feat,
-        feature_val=thresh,
-        information_gain=gain,
-        n_samples=n_samples
-    )
-
-    #Recursively build left subtree 
-    node.left = build_tree(
-        X[left_mask], y[left_mask],
-        depth + 1, max_depth, min_samples_split, min_samples_leaf
-    )
-
-    #Recursively build right subtree
-    node.right = build_tree(
-        X[right_mask], y[right_mask],
-        depth + 1, max_depth, min_samples_split, min_samples_leaf
-    )
-
+    node = TreeNode(feature_idx=feat, feature_val=thresh, information_gain=gain, n_samples=n_samples)
+    node.left  = build_tree(X[left_mask],  y[left_mask],  depth+1, max_depth, min_samples_split, min_samples_leaf, max_features)
+    node.right = build_tree(X[right_mask], y[right_mask], depth+1, max_depth, min_samples_split, min_samples_leaf, max_features)
     return node
 
 #Predict label for a single sample by traversing the tree
@@ -120,6 +95,15 @@ def predict_one(node, x):
         return predict_one(node.left, x)
     else:
         return predict_one(node.right, x)
+    
+def predict_proba_one(node, x, n_classes=2):
+    if node.is_leaf:
+        probs = [node.prediction_probs.get(c, 0.0) for c in range(n_classes)]
+        return probs
+    if x[node.feature_idx] <= node.feature_val:
+        return predict_proba_one(node.left, x, n_classes)
+    else:
+        return predict_proba_one(node.right, x, n_classes)
 
 #Predict labels for multiple samples
 def predict(root, X):
@@ -148,25 +132,30 @@ def get_feature_importances(node, n_features):
 #CART decision tree classifier implementation
 class CARTClassifier:
     #Store hyperparameters
-    def __init__(self, max_depth=10, min_samples_split=2, min_samples_leaf=1):
+    def __init__(self, max_depth=10, min_samples_split=2, min_samples_leaf=1, max_features=None):
         self.max_depth         = max_depth
         self.min_samples_split = min_samples_split
         self.min_samples_leaf  = min_samples_leaf
+        self.max_features      = max_features
         self.root              = None
         self.feature_names_    = None
 
     #Train the decision tree
     def fit(self, X, y, feature_names=None):
-        self.root           = build_tree(X, y,
-                                         max_depth=self.max_depth,
-                                         min_samples_split=self.min_samples_split,
-                                         min_samples_leaf=self.min_samples_leaf)
+        self.root = build_tree(X, y,
+                           max_depth=self.max_depth,
+                           min_samples_split=self.min_samples_split,
+                           min_samples_leaf=self.min_samples_leaf,
+                           max_features=self.max_features)  # ← pass it through
         self.feature_names_ = feature_names
         return self
 
     #Predict labels
     def predict(self, X):
         return predict(self.root, X)
+    
+    def predict_proba(self, X):
+        return np.array([predict_proba_one(self.root, x) for x in X])
 
     #Estimate accuracy (preliminary)
     def score(self, X, y):

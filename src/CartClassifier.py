@@ -1,27 +1,21 @@
-#Decision Tree implementation is based on the CART Algorithm
-#Compute Gini impurity, which measures how mixed the labels are (0 = pure, higher = more mixed).
-
+# Decision Tree implementation is based on the CART Algorithm
 import pandas as pd
 import numpy as np
-
-from sklearn.cluster import AgglomerativeClustering
-from sklearn.model_selection import GroupShuffleSplit
-from Bio.Align import substitution_matrices
 from collections import Counter
 from treenode import TreeNode
-from sklearn.model_selection import train_test_split
 
+#Compute Gini impurity, which measures how mixed the labels are (0 = pure, higher = more mixed).
 def gini(y):
     if len(y) == 0:
         return 0.0
-    counts = np.bincount(y)
+    counts = np.bincount(y, minlength=2)
     probs  = counts / len(y)
     return 1.0 - np.sum(probs ** 2)
 
 #Compute Gini-based information gain, which measures how much a split improves purity. 
 def information_gain(y_parent, y_left, y_right):
     n = len(y_parent)
-    weighted_child = (len(y_left) / n)  * gini(y_left) + \
+    weighted_child = (len(y_left) / n) * gini(y_left) + \
                      (len(y_right) / n) * gini(y_right)
     return gini(y_parent) - weighted_child
 
@@ -49,18 +43,16 @@ def best_split(X, y):
 
     return best_feat, best_thresh, best_gain
 
-#Create a leaf node containing Create a leaf node containing class counts and class probabilities
+#Create a leaf node containing class counts and class probabilities
 def make_leaf(y, n_samples):
     unique, counts = np.unique(y, return_counts=True)
     label_counts = dict(zip(unique.tolist(), counts.tolist()))
     probs = {k: v / n_samples for k, v in label_counts.items()}
-
     return TreeNode(
         n_samples=n_samples,
         prediction_probs=probs,
         label_counts=label_counts
     )
-
 
 #Recursively build the decision tree using CART algorithm. Stops when: max depth is reached, node is pure, or not enough samples
 def build_tree(X, y, depth=0, max_depth=10, min_samples_split=2, min_samples_leaf=1):
@@ -82,7 +74,7 @@ def build_tree(X, y, depth=0, max_depth=10, min_samples_split=2, min_samples_lea
         return make_leaf(y, n_samples)
 
     #Apply split
-    left_mask = X[:, feat] <= thresh
+    left_mask  = X[:, feat] <= thresh
     right_mask = ~left_mask
 
     #Enforce minimum leaf size
@@ -115,7 +107,6 @@ def build_tree(X, y, depth=0, max_depth=10, min_samples_split=2, min_samples_lea
 def predict_one(node, x):
     if node.is_leaf:
         return max(node.prediction_probs, key=node.prediction_probs.get)
-
     if x[node.feature_idx] <= node.feature_val:
         return predict_one(node.left, x)
     else:
@@ -125,23 +116,18 @@ def predict_one(node, x):
 def predict(root, X):
     return np.array([predict_one(root, x) for x in X])
 
-
 #Aggregate feature importance based on information gain
 def get_feature_importances(node, n_features):
-
     importances = np.zeros(n_features)
 
     def walk(n):
         if n is None or n.is_leaf:
             return
-
         importances[n.feature_idx] += n.feature_importance
-
         walk(n.left)
         walk(n.right)
 
     walk(node)
-
     total = importances.sum()
     return importances / total if total > 0 else importances
 
@@ -157,18 +143,35 @@ class CARTClassifier:
 
     #Train the decision tree
     def fit(self, X, y, feature_names=None):
-        self.root           = build_tree(X, y,
-                                         max_depth=self.max_depth,
-                                         min_samples_split=self.min_samples_split,
-                                         min_samples_leaf=self.min_samples_leaf)
+        X = np.array(X) if not isinstance(X, np.ndarray) else X
+        y = np.array(y) if not isinstance(y, np.ndarray) else y
+        self.root = build_tree(X, y,
+                               max_depth=self.max_depth,
+                               min_samples_split=self.min_samples_split,
+                               min_samples_leaf=self.min_samples_leaf)
         self.feature_names_ = feature_names
         return self
 
     #Predict labels
     def predict(self, X):
+        X = np.array(X) if not isinstance(X, np.ndarray) else X
         return predict(self.root, X)
 
-    #Estimate accuracy (preliminary)
+    #Predict class probabilities
+    def predict_proba(self, X):
+        X = np.array(X) if not isinstance(X, np.ndarray) else X
+        probs = []
+        for x in X:
+            node = self.root
+            while not node.is_leaf:
+                if x[node.feature_idx] <= node.feature_val:
+                    node = node.left
+                else:
+                    node = node.right
+            probs.append([node.prediction_probs.get(0, 0), node.prediction_probs.get(1, 0)])
+        return np.array(probs)
+
+    #Calculate accuracy
     def score(self, X, y):
         return np.mean(self.predict(X) == y)
 
@@ -178,4 +181,3 @@ class CARTClassifier:
         if self.feature_names_:
             return pd.Series(imps, index=self.feature_names_).sort_values(ascending=False)
         return imps
-    

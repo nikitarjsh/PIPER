@@ -5,7 +5,10 @@ import matplotlib.pyplot as plt
 import peptidy
 import numpy as np
 import pandas as pd
-
+import os
+import json
+import joblib
+from datetime import datetime
 
 
 def extract_features(sequence):
@@ -170,3 +173,109 @@ def build_peptidy_feature_df(df, peptide_col="peptide", padding_len=9):
         feature_list.append(feat_dict)
 
     return pd.DataFrame(feature_list, index=df.index)
+
+def save_model(model, output_dir, model_name, metadata=None):
+    """
+    Save trained models
+    """
+
+    os.makedirs(output_dir, exist_ok=True)
+
+    model_name = model_name.replace(" ", "_")
+
+    model_path = os.path.join(output_dir, f"{model_name}.pkl")
+    metadata_path = os.path.join(output_dir, f"{model_name}_metadata.json")
+
+    joblib.dump(model, model_path)
+
+    saved_metadata = {
+        "model_name": model_name,
+        "model_type": type(model).__name__,
+        "saved_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "model_path": model_path,
+    }
+
+    if hasattr(model, "get_params"):
+        saved_metadata["parameters"] = model.get_params()
+
+    if metadata is not None:
+        saved_metadata.update(metadata)
+
+    with open(metadata_path, "w") as f:
+        json.dump(saved_metadata, f, indent=4, default=str)
+
+    print(f"Saved model: {model_path}")
+    print(f"Saved metadata: {metadata_path}")
+
+    return model_path
+
+def soft_voting_ensemble(models, X, threshold=0.5):
+    """
+    Average predicted probabilities from multiple models.
+    """
+
+    probs = []
+
+    for name, model in models:
+        if not hasattr(model, "predict_proba"):
+            print(f"Skipping {name}")
+            continue
+
+        y_prob = model.predict_proba(X)[:, 1]
+        probs.append(y_prob)
+
+    avg_prob = np.mean(probs, axis=0)
+    y_pred = (avg_prob >= threshold).astype(int)
+
+    return y_pred, avg_prob
+
+def weighted_soft_voting_ensemble(models, X, threshold=0.5, weights=None):
+    """
+    Weighted soft voting using predicted probabilities.
+    """
+
+    probs = []
+    used_weights = []
+    used_models = []
+
+    if weights is None:
+        weights = {
+            "random_forest": 0.60,
+            "xgboost": 0.20,
+            "lightgbm": 0.15,
+            "adaboost": 0.05
+        }
+
+    for name, model in models:
+        if not hasattr(model, "predict_proba"):
+            print(f"Skipping {name}")
+            continue
+
+        model_weight = None
+
+        for key, weight in weights.items():
+            if key in name:
+                model_weight = weight
+                break
+
+        if model_weight is None:
+            print(f"Skipping {name} (no weight)")
+            continue
+
+        y_prob = model.predict_proba(X)[:, 1]
+
+        probs.append(y_prob)
+        used_weights.append(model_weight)
+        used_models.append(name)
+
+    used_weights = np.array(used_weights)
+    used_weights = used_weights / used_weights.sum()
+
+    weighted_prob = np.average(probs, axis=0, weights=used_weights)
+    y_pred = (weighted_prob >= threshold).astype(int)
+
+    print("Used models:")
+    for name, weight in zip(used_models, used_weights):
+        print(f"{name}: {weight:.2f}")
+
+    return y_pred, weighted_prob

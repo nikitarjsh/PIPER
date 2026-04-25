@@ -1,0 +1,35 @@
+{
+    "model_name": "adaboost_v2",
+    "model_type": "AdaBoostClassifier",
+    "saved_at": "2026-04-25 11:45:11",
+    "model_path": "../models/adaboost_v2.pkl",
+    "parameters": {
+        "algorithm": "deprecated",
+        "estimator__ccp_alpha": 0.0,
+        "estimator__class_weight": null,
+        "estimator__criterion": "gini",
+        "estimator__max_depth": 1,
+        "estimator__max_features": null,
+        "estimator__max_leaf_nodes": null,
+        "estimator__min_impurity_decrease": 0.0,
+        "estimator__min_samples_leaf": 1,
+        "estimator__min_samples_split": 2,
+        "estimator__min_weight_fraction_leaf": 0.0,
+        "estimator__monotonic_cst": null,
+        "estimator__random_state": null,
+        "estimator__splitter": "best",
+        "estimator": "DecisionTreeClassifier(max_depth=1)",
+        "learning_rate": 0.1,
+        "n_estimators": 400,
+        "random_state": 42
+    },
+    "config": {
+        "n": 400,
+        "lr": 0.1,
+        "d": 1
+    },
+    "val_accuracy": 0.7351313969571232,
+    "val_f1": 0.7451763140385895,
+    "val_mcc": 0.4893551903213273,
+    "notes": "AdaBoost hyperparameter tuning model"
+}

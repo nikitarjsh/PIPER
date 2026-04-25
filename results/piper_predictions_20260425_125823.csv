@@ -1,0 +1,2 @@
+peptide,HLA,adaboost_v4_probability,adaboost_v4_prediction,xgboost_v4_probability,xgboost_v4_prediction,random_forest_scratch_v6_probability,random_forest_scratch_v6_prediction,lightgbm_v16_probability,lightgbm_v16_prediction,consensus_probability,consensus_prediction
+NVFAFPFTIY,HLA-B*15:01,0.612670287355017,immunogenic,0.9724458,immunogenic,0.9,immunogenic,0.9999691141228557,immunogenic,0.8712712968692927,immunogenic

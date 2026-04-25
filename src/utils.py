@@ -279,3 +279,21 @@ def weighted_soft_voting_ensemble(models, X, threshold=0.5, weights=None):
         print(f"{name}: {weight:.2f}")
 
     return y_pred, weighted_prob
+
+
+#### to use in CLI
+def process_batch(seqs_batch):
+    return [extract_features(s) for s in seqs_batch]
+
+def feature_processing(seqs, seq_type):
+    batch_size = 5000
+    all_features = []
+    for i in range(0, len(seqs), batch_size):
+        print("Finished batch "+str(i))
+        batch = seqs[i:i + batch_size]
+        batch_features = process_batch(batch)
+        all_features.extend(batch_features)
+    
+    all_features_df = pd.DataFrame(all_features)
+    all_features_df.columns = [seq_type+x for x in all_features_df.columns]
+    return(all_features_df) 

@@ -19,7 +19,7 @@ This project was developed as part of the course
 **02-206 Machine Learning for Scientists, Spring 2026**.
 
 <p align="center">
-  <img src="figures/overview.png" alt="PIPER Overview" width="700"/>
+  <img src="figures/piper_overview.png" alt="PIPER Overview" width="500"/>
 </p>
 ---
 
@@ -28,7 +28,7 @@ This project was developed as part of the course
 ```
 PIPER/
 ├── data/
-│   ├── raw/                                      # aw datasets
+│   ├── raw/                                      # raw datasets
 │   ├── features/                                 # processed feature datasets
 │   ├── splits/                                   # train/val/test splits
 │   ├── dataset_train.csv
@@ -46,25 +46,26 @@ PIPER/
 │   └── piper_predictions_*.csv
 │
 ├── src/                                          # scripts and utilities
-│   ├── utils.py
-│   ├── RandomForestFromScratch.py
-│   ├── mhc_pseudo.py
-│   ├── metrics.py
-│   ├── treenode.py
-│   └── *.ipynb                                   
 │
 ├── figures/                                      # evaluation plots and figures
 │
 ├── example.csv                                   # sample input file
-├── main.py                                       
+├── requirements.txt                              # project dependencies
+├── main.py                                       # CLI entry point
 └── README.md
 ```
 
 ## Installation
 
-To be added.
+Clone the repository and install dependencies:
 
----
+```bash
+git clone https://github.com/nikitarjsh/PIPER.git
+cd PIPER
+pip install -r requirements.txt
+```
+
+Requires Python 3.10 or later
 
 ## Usage
 

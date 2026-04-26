@@ -19,7 +19,7 @@ This project was developed as part of the course
 **02-206 Machine Learning for Scientists, Spring 2026**.
 
 <p align="center">
-  <img src="figures/piper_overview.png" alt="PIPER Overview" width="500"/>
+  <img src="figures/PIPER-abstract.png" alt="PIPER Overview" width="800"/>
 </p>
 ---
 

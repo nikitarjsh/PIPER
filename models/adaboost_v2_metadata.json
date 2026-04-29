@@ -1,7 +1,7 @@
 {
     "model_name": "adaboost_v2",
     "model_type": "AdaBoostClassifier",
-    "saved_at": "2026-04-25 11:45:11",
+    "saved_at": "2026-04-29 19:23:20",
     "model_path": "../models/adaboost_v2.pkl",
     "parameters": {
         "algorithm": "deprecated",

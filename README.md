@@ -86,6 +86,16 @@ The input CSV should contain two columns:
 ```csv
 peptide,HLA
 ```
+### SARS cov2 test
+
+```bash
+python main.py --input_csv data/processed_sars_cov_2_with_position_specific_features.csv
+```
+### Generating results plots
+
+```bash
+python main.py --plot_results
+```
 
 ## Output
 

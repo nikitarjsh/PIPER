@@ -6,6 +6,8 @@ from datetime import datetime
 import joblib
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.metrics import roc_curve, auc, precision_recall_curve, average_precision_score
 
 
 ROOT_DIR = os.path.dirname(__file__)
@@ -199,6 +201,44 @@ def predict_all_models(models, X):
 
     return output
 
+def run_evaluation_plots():
+
+    test_df = pd.read_csv("data/dataset_test.csv")
+
+    DROP_COLS = ["index", "peptide", "HLA", "hla_sequence"]
+    TARGET_COL = "Label"
+
+    y_test = test_df[TARGET_COL].values
+    X_test = test_df.drop(columns=[TARGET_COL] + [c for c in DROP_COLS if c in test_df.columns])
+
+    cat_cols = X_test.select_dtypes(include=["object", "category"]).columns.tolist()
+    X_test = pd.get_dummies(X_test, columns=cat_cols)
+
+    models = load_models()
+
+    plt.figure(figsize=(7,6))
+
+    for name, model in models:
+        if not hasattr(model, "predict_proba"):
+            continue
+
+        y_prob = model.predict_proba(X_test)[:, 1]
+        fpr, tpr, _ = roc_curve(y_test, y_prob)
+        roc_auc = auc(fpr, tpr)
+
+        plt.plot(fpr, tpr, label=f"{name} (AUC={roc_auc:.3f})")
+
+    plt.plot([0,1],[0,1],"--",color="gray")
+    plt.xlabel("FPR")
+    plt.ylabel("TPR")
+    plt.title("ROC Curves - Test Set")
+    plt.legend()
+
+    os.makedirs("figures", exist_ok=True)
+    plt.savefig("figures/roc_curves.png", dpi=300, bbox_inches="tight")
+    plt.close()
+
+    print("Saved ROC curve to figures/")
 
 def save_predictions(processed_df, model_outputs, consensus_pred, consensus_prob):
     """
@@ -249,6 +289,12 @@ def main():
     )
 
     parser.add_argument(
+    "--plot_results",
+    action="store_true",
+    help="Generate ROC / evaluation plots on test set"
+   )
+
+    parser.add_argument(
         "--threshold",
         type=float,
         default=0.5,
@@ -256,6 +302,11 @@ def main():
     )
 
     args = parser.parse_args()
+
+    if args.plot_results:
+        print("Generating evaluation plots...")
+        run_evaluation_plots()
+        return
 
     if args.input_csv is not None and (args.peptide is not None or args.hla is not None):
         raise ValueError("Use either --input_csv or --peptide with --hla, not both.")
